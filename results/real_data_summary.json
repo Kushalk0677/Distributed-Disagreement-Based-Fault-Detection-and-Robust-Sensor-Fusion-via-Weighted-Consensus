@@ -1,0 +1,22 @@
+{
+  "maintenance": {
+    "dataset": "maintenance",
+    "N": 5,
+    "T": 500,
+    "channel": "multi-channel",
+    "mse": {
+      "Average": 0.14832952243836348,
+      "Trimmed Mean": 0.09380581731574562,
+      "Local Median": 0.03708238060959087,
+      "Plain Consensus": 0.14832952243836342,
+      "Proposed": 0.04848355729308148
+    },
+    "n_flagged": {
+      "Proposed": 0,
+      "CUSUM": 4,
+      "EWMA": 0
+    },
+    "detection": null,
+    "has_labels": 0.0
+  }
+}
