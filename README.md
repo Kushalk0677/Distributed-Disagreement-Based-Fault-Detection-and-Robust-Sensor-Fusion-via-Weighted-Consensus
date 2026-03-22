@@ -1,11 +1,5 @@
 # Distributed Disagreement-Based Fault Detection and Robust Sensor Fusion via Weighted Consensus
 
-Simulation code accompanying the IEEE Sensors Letters submission:
-
-> **"Distributed Disagreement-Based Fault Detection and Robust Sensor Fusion via Weighted Consensus"**  
-> Kushal Khemani and Sujal Kosta
-
----
 
 ## Overview
 
@@ -170,16 +164,6 @@ The trend term (Eq. 4) provides ~29% MSE reduction for drift faults vs. β=0 at 
 
 ---
 
-## Citation
-
-```bibtex
-@article{khemani2026disagreement,
-  title   = {Distributed Disagreement-Based Fault Detection and Robust Sensor Fusion via Weighted Consensus},
-  author  = {Khemani, Kushal and Kosta, Sujal},
-  journal = {IEEE Sensors Letters},
-  year    = {2026},
-}
-```
 
 ---
 
