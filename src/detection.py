@@ -26,7 +26,7 @@ class DisagreementDetector:
     """
 
     def __init__(self, alpha: float = 0.85, beta: float = 2.0,
-                 lag: int = 10, k: float = 1.5):
+                 lag: int = 25, k: float = 1.5):
         self.alpha = alpha
         self.beta  = beta
         self.lag   = lag

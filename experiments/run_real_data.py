@@ -33,7 +33,7 @@ from src.network   import (build_random_geometric_graph,
                             assign_faults_random)
 from src.fusion    import (fuse_average, fuse_trimmed_mean,
                             fuse_local_median, fuse_consensus_plain,
-                            fuse_proposed)
+                            fuse_proposed, fuse_distributed_kf)
 from src.detection import DisagreementDetector, CUSUMDetector, EWMADetector
 from src.metrics   import mse, rmse, detection_metrics
 import src.visualize as viz
@@ -54,7 +54,7 @@ plt.rcParams.update({
 FIGDIR = Path("results/figures")
 FIGDIR.mkdir(parents=True, exist_ok=True)
 
-FUSION_PARAMS = dict(alpha=0.85, beta=2.0, lag=25, n_iter=40, trim=0.10)
+FUSION_PARAMS = dict(alpha=0.85, beta=2.0, lag=25, n_iter=80, trim=0.10)
 DET_PARAMS    = dict(k=1.5)
 
 
@@ -160,6 +160,7 @@ def run_dataset_experiment(name: str, data_dir: str = "data/raw",
         alpha=fp["alpha"], beta=fp["beta"],
         lag=fp["lag"], n_iter=fp["n_iter"],
     )
+    s_dkf   = fuse_distributed_kf(Y, P, n_iter=fp["n_iter"])
 
     estimates = {
         "Average":         s_avg,
@@ -167,6 +168,7 @@ def run_dataset_experiment(name: str, data_dir: str = "data/raw",
         "Local Median":    s_lmed,
         "Plain Consensus": s_pcon,
         "Proposed":        s_prop,
+        "Dist. KF":        s_dkf,
     }
     mse_scores = {k: mse(s_ref, v) for k, v in estimates.items()}
 

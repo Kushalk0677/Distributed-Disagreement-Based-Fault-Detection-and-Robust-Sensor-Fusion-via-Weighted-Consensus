@@ -37,6 +37,7 @@ PALETTE = {
     "Local Median":     ("#2ca02c", "-^"),
     "Plain Consensus":  ("#9467bd", "-D"),
     "Proposed":         ("#1f77b4", "-*"),
+    "Dist. KF":         ("#17becf", "-P"),
     "Ground truth":     ("black",   "--"),
     "CUSUM":            ("#e377c2", "-o"),
     "EWMA":             ("#8c564b", "-s"),
@@ -355,4 +356,43 @@ def plot_clustered_topology(graph, fault_mask_rand, fault_mask_clust,
         ax.set_xlabel("x"); ax.set_ylabel("y")
     axes[0].legend(handles=[mpatches.Patch(color="#1f77b4", label="Healthy"),
                               mpatches.Patch(color="#d62728", label="Faulty")], fontsize=7)
+    _save(fig, savename)
+
+
+# ── Fig 16: Distributed KF vs baselines (MSE × fault fraction) ───────────────
+def plot_distributed_kf_comparison(fractions, mse_results, ci_results=None,
+                                    savename="fig16_distributed_kf_comparison.pdf"):
+    """
+    Head-to-head: Proposed vs Distributed KF vs classical baselines.
+
+    mse_results : dict {method: [mse per fault fraction]}
+    ci_results  : dict {method: [95-CI half-width per fault fraction]}
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(9.0, 3.2))
+
+    # Left: all methods
+    ax = axes[0]
+    for label, vals in mse_results.items():
+        yerr = ci_results.get(label) if ci_results else None
+        _method_line(ax, fractions, vals, label, yerr=yerr, markersize=5)
+    ax.set_xlabel("Fault fraction")
+    ax.set_ylabel("MSE")
+    ax.set_title("All Methods vs. Fault Fraction")
+    ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
+    ax.legend(fontsize=7)
+
+    # Right: zoom on distributed methods only
+    ax2 = axes[1]
+    distributed = ["Plain Consensus", "Dist. KF", "Proposed"]
+    for label in distributed:
+        if label in mse_results:
+            yerr = ci_results.get(label) if ci_results else None
+            _method_line(ax2, fractions, mse_results[label], label,
+                         yerr=yerr, markersize=5)
+    ax2.set_xlabel("Fault fraction")
+    ax2.set_ylabel("MSE")
+    ax2.set_title("Distributed Methods: Proposed vs Dist. KF vs Plain Consensus")
+    ax2.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.0%}"))
+    ax2.legend(fontsize=7)
+
     _save(fig, savename)

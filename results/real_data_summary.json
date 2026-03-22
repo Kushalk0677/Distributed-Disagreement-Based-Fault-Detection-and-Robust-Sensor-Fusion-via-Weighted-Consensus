@@ -1,4 +1,67 @@
 {
+  "berkeley": {
+    "dataset": "berkeley",
+    "N": 50,
+    "T": 2000,
+    "channel": "temperature",
+    "mse": {
+      "Average": 0.0028005118671090416,
+      "Trimmed Mean": 0.0018518540466253093,
+      "Local Median": 0.00023531025784032802,
+      "Plain Consensus": 0.0028005118671090355,
+      "Proposed": 0.0010899050766583593,
+      "Dist. KF": 0.003078544565787682
+    },
+    "n_flagged": {
+      "Proposed": 3,
+      "CUSUM": 49,
+      "EWMA": 0
+    },
+    "detection": null,
+    "has_labels": false
+  },
+  "airquality": {
+    "dataset": "airquality",
+    "N": 5,
+    "T": 2000,
+    "channel": "oxide_sensors",
+    "mse": {
+      "Average": 0.10718259140860929,
+      "Trimmed Mean": 0.00751485542658421,
+      "Local Median": 0.2549744887637806,
+      "Plain Consensus": 0.107182591408608,
+      "Proposed": 0.03250665990078504,
+      "Dist. KF": 0.2258130593285857
+    },
+    "n_flagged": {
+      "Proposed": 0,
+      "CUSUM": 5,
+      "EWMA": 0
+    },
+    "detection": null,
+    "has_labels": 0.0
+  },
+  "smartcity": {
+    "dataset": "smartcity",
+    "N": 2,
+    "T": 2000,
+    "channel": "vehicle_count",
+    "mse": {
+      "Average": 0.0,
+      "Trimmed Mean": null,
+      "Local Median": 0.0,
+      "Plain Consensus": 0.0,
+      "Proposed": 3.014611633789466e-20,
+      "Dist. KF": 0.179288988157995
+    },
+    "n_flagged": {
+      "Proposed": 0,
+      "CUSUM": 2,
+      "EWMA": 0
+    },
+    "detection": null,
+    "has_labels": false
+  },
   "maintenance": {
     "dataset": "maintenance",
     "N": 5,
@@ -9,7 +72,8 @@
       "Trimmed Mean": 0.09380581731574562,
       "Local Median": 0.03708238060959087,
       "Plain Consensus": 0.14832952243836342,
-      "Proposed": 0.04848355729308148
+      "Proposed": 0.04848352909863608,
+      "Dist. KF": 0.41997656238769027
     },
     "n_flagged": {
       "Proposed": 0,

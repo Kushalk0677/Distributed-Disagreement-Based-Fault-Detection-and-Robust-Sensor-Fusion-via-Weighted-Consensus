@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+venv/
+env/
+.venv/
+
+# Data files (download separately — see data/raw/README_DATA.md)
+data/raw/*.txt
+data/raw/*.csv
+data/raw/.ipynb_checkpoints/
+
+# Generated results (reproducible via experiments/)
+results/figures/*.pdf
+results/figures/*.png
+results/summary.json
+results/real_data_summary.json
+
+# Paper figures (reproducible via generate_paper_figures.py)
+paper_lsens/figs/*.png
+paper_lsens/figs/*.pdf
+
+# LaTeX build artifacts
+*.aux *.log *.fdb_latexmk *.fls *.synctex *.synctex.gz
+*.out *.toc *.bbl *.blg
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Zip artifacts
+*.zip

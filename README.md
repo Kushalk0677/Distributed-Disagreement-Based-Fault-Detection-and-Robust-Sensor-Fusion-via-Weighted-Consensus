@@ -1,39 +1,58 @@
-# Neighbor Disagreement-Based Fault Detection for Distributed Sensor Fusion
+# Distributed Disagreement-Based Fault Detection and Robust Sensor Fusion via Weighted Consensus
 
-Simulation code accompanying the IEEE Sensors Letters paper:
+Simulation code accompanying the IEEE Sensors Letters submission:
 
-> **"Distributed Disagreement-Based Fault Detection andRobust Sensor Fusion via Weighted Consensus"**
+> **"Distributed Disagreement-Based Fault Detection and Robust Sensor Fusion via Weighted Consensus"**  
+> Kushal Khemani and Sujal Kosta
 
 ---
 
 ## Overview
 
-This repository implements a lightweight distributed fault detection mechanism for sensor networks. Each sensor computes a *disagreement score* against its neighbors' median measurement and uses it as a reliability weight during fusion. No centralized controller, prior noise statistics, or explicit fault models are required.
+A lightweight fully distributed fault detection and sensor fusion framework for sensor networks. Each sensor computes a **trend-augmented disagreement score** against its neighbors' median measurement and converts it to a reliability weight used in iterative weighted consensus. No centralized controller, prior noise statistics, or explicit fault models are required.
+
+### Key hyperparameter defaults (aligned with paper)
+
+| Parameter | Symbol | Value | Notes |
+|-----------|--------|-------|-------|
+| Temporal smoothing | α | 0.85 | Flat MSE for α ∈ [0.7, 0.95] |
+| Trend weight | β | 2.0 | Monotone MSE improvement with β |
+| Lookback window | L | **25** | ≈ ½ × fault onset time (t₀=50) |
+| Consensus iterations | K | 80 | Sufficient for N ≤ 100 |
+| Detection threshold | k | **1.5** | FAR ≤ Φ(−1.5) ≈ 0.067 (theoretical); empirical FAR ≤ 0.007 |
+
+> ⚠️ **Important:** `k_threshold = 1.5` is the theoretically grounded value (Eq. 10 in the paper).
+> Do **not** use k < 1.0 — this collapses the FAR theoretical bound to Φ(−k) > 0.15, making the
+> guarantee vacuous even if empirical FAR remains low in practice.
 
 ---
 
 ## Repository Structure
 
 ```
-sensor_fusion_repo/
-│
+repo/
 ├── src/
-│   ├── network.py       # Random geometric graph topology builder
-│   ├── signal.py        # Ground-truth signal + fault injection models
-│   ├── fusion.py        # Fusion algorithms (average, median, proposed)
-│   ├── metrics.py       # MSE, RMSE, FDR, FAR evaluation
-│   └── visualize.py     # All paper figures
+│   ├── network.py            # Random geometric graph topology builder
+│   ├── signal.py             # Ground-truth signal + fault injection models
+│   ├── fusion.py             # All fusion algorithms (average, median, proposed, Dist. KF)
+│   ├── detection.py          # DisagreementDetector, CUSUM, EWMA
+│   ├── metrics.py            # MSE, RMSE, FDR, FAR, F1, CI evaluation
+│   ├── datasets.py           # Real-dataset loaders
+│   └── visualize.py          # All paper figures
 │
 ├── experiments/
-│   └── run_experiments.py   # Main experiment runner (all 5 experiments)
+│   ├── run_experiments.py    # Main MC experiment runner (12 experiments)
+│   └── run_real_data.py      # Real-dataset validation runner
 │
 ├── configs/
-│   └── default.yaml         # All hyperparameters in one place
+│   └── default.yaml          # All hyperparameters — edit here, not in code
 │
 ├── results/
-│   ├── figures/             # PDF figures (generated on run)
-│   └── summary.json         # Numeric results (generated on run)
+│   ├── figures/              # PDF figures (generated on run)
+│   ├── summary.json          # Simulation numeric results
+│   └── real_data_summary.json
 │
+├── data/raw/                 # Place dataset files here (see README_DATA.md)
 ├── requirements.txt
 └── README.md
 ```
@@ -43,15 +62,12 @@ sensor_fusion_repo/
 ## Setup
 
 ```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/sensor_fusion_repo.git
-cd sensor_fusion_repo
+git clone https://github.com/Kushalk0677/Distributed-Disagreement-Based-Fault-Detection-and-Robust-Sensor-Fusion.git
+cd repo
 
-# Create a virtual environment (recommended)
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
+source venv/bin/activate   # Windows: venv\Scripts\activate
 
-# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -59,119 +75,114 @@ pip install -r requirements.txt
 
 ## Running Experiments
 
-### Full experiments (all 5, ~5 min)
+### Full simulation (~15–30 min, 50 trials)
 ```bash
 python experiments/run_experiments.py
 ```
 
-### Quick mode (reduced trials, ~30 sec)
+### Quick mode for testing (~1–2 min)
 ```bash
 python experiments/run_experiments.py --quick
 ```
 
-### Custom config
+### Real-dataset validation
 ```bash
-python experiments/run_experiments.py --config configs/default.yaml
+python experiments/run_real_data.py --list          # check which datasets are present
+python experiments/run_real_data.py                 # run all available
+python experiments/run_real_data.py --dataset berkeley
+python experiments/run_real_data.py --dataset airquality    # strongest result (7.7× over Average)
+python experiments/run_real_data.py --dataset maintenance   # has ground-truth fault labels
 ```
 
----
-
-
-## Configuration
-
-All parameters are in `configs/default.yaml`:
-
-```yaml
-network:
-  N: 30          # number of sensors
-  radius: 0.35   # communication radius
-
-signal:
-  T: 300         # time steps
-  type: sinusoid # sinusoid | step | ramp | composite
-  noise_std: 0.1
-
-faults:
-  fault_fraction: 0.20
-  fault_type: stuck   # stuck | drift | malicious
-  fault_onset: 50
-
-fusion:
-  alpha: 0.9     # temporal smoothing coefficient
-```
+> **Note:** The SmartCity dataset yields N=2 sensors after filtering — too small for meaningful
+> consensus evaluation and excluded from the paper.
 
 ---
 
 ## Fault Models
 
-| Type | Description |
-|------|-------------|
-| `stuck` | Sensor freezes at its value at fault onset |
-| `drift` | Slowly increasing bias after fault onset |
-| `malicious` | Replaced with uniform random values |
+| Type | Description | Detection difficulty |
+|------|-------------|----------------------|
+| `stuck` | Freezes at value at fault onset | Easy — large instantaneous disagreement |
+| `drift` | Slowly increasing bias | Hard — requires trend term (β > 0, L = 25) |
+| `malicious` | Uniform[smin−δ, smax+δ] | Easy — large disagreement |
+| `noise_burst` | σ² → σ²_burst ≫ σ² | Easy — large disagreement |
+
+The trend term (Eq. 4) provides ~29% MSE reduction for drift faults vs. β=0 at fault fractions 5–30%.
 
 ---
 
-## Method Summary
+## Method (paper equations)
 
-The proposed method (equations from the paper):
+```
+1. Instantaneous disagreement:   d_i(t)  = |y_i(t) − median_{j∈Nᵢ} y_j(t)|
+2. Temporal smoothing:           D_i(t)  = α·D_i(t−1) + (1−α)·d_i(t)
+3. Trend-augmented statistic:    D⁺_i(t) = D_i(t) + β·max{0, D_i(t) − D_i(t−L)}
+4. Reliability weight:           w_i(t)  = 1 / (1 + D⁺_i(t))
+5. Weighted consensus (K iters): x_i^(k+1) = Σ_j P_ij·w_j·x_j^(k) / Σ_j P_ij·w_j
+6. Global estimate:              ŝ(t)    = (1/N) Σ_i x_i^(K)
+7. Fault detection:              τ = μ_w̄ − k·σ_w̄;   f̂_i = 1[w̄_i < τ]
+```
 
-1. **Disagreement metric:** `d_i(t) = |y_i(t) − median(y_j(t), j ∈ N_i)|`
-2. **Temporal smoothing:** `D_i(t) = α·D_i(t−1) + (1−α)·d_i(t)`
-3. **Reliability weight:** `w_i(t) = 1 / (1 + D_i(t))`
-4. **Weighted fusion:** `ŝ(t) = Σ w_i·y_i / Σ w_i`
+---
+
+## Key Results
+
+### Simulation (N=100, 50 trials, 20% stuck faults)
+
+| Method | MSE | vs. Proposed |
+|--------|-----|-------------|
+| Average | 4.9 × 10⁻² | 6× worse |
+| Trimmed Mean | 2.0 × 10⁻² | 2.4× worse |
+| Local Median | 3.1 × 10⁻⁴ (random) / degrades (clustered) | — |
+| Plain Consensus | 4.9 × 10⁻² | 6× worse |
+| Dist. KF | 4.9 × 10⁻² | 6× worse |
+| **Proposed** | **8.2 × 10⁻³** | — |
+
+**Clustered faults (20% density):** Proposed achieves statistically significant 29% MSE improvement over Local Median (0.024 vs. 0.034; 95% CI non-overlapping, 200 trials).
+
+### Practical guidance
+
+| Fault scenario | Recommended method |
+|---|---|
+| Isolated faults, spatially correlated field | Local Median (lower MSE, 1 comm. round) |
+| Clustered or targeted faults | **Proposed** |
+| Drift faults | **Proposed** (trend term essential) |
+
+---
+
+## Real-Dataset Highlights
+
+**AirQuality UCI (5 oxide sensors, real drift):**
+
+| Method | MSE |
+|--------|-----|
+| Average | 0.107 |
+| Local Median | 0.255 — collapses under real sensor drift |
+| **Proposed** | **0.033** — 7.7× improvement over Average |
+
+**Intel Berkeley Lab (48 temperature sensors):**
+
+| Condition | Local Median | Proposed |
+|-----------|-------------|---------|
+| Random faults | **0.26 × 10⁻³** (wins) | 0.47 × 10⁻³ |
+| Clustered faults | 11.7 × 10⁻³ | **5.2 × 10⁻³** (wins) |
 
 ---
 
 ## Citation
 
 ```bibtex
-@article{yourname2024disagreement,
-  title   = {Neighbor Disagreement-Based Fault Detection for Distributed Sensor Fusion},
-  author  = {Author Name},
+@article{khemani2026disagreement,
+  title   = {Distributed Disagreement-Based Fault Detection and Robust Sensor Fusion via Weighted Consensus},
+  author  = {Khemani, Kushal and Kosta, Sujal},
   journal = {IEEE Sensors Letters},
-  year    = {2024},
+  year    = {2026},
 }
 ```
 
 ---
 
-## Real-World Datasets
+## License
 
-Place data files in `data/raw/` (see `data/raw/README_DATA.md` for download links and format notes).
-
-```
-data/raw/
-  BerkeleyLab.txt               ← Intel Berkeley Lab (54 sensors, temp/humidity/light/voltage)
-  AirQualityUCI.csv             ← UCI Air Quality (5 oxide sensors, known drift)
-  smart_city_sensor_data.csv    ← Smart City IoT (traffic/energy/noise, lat/lon)
-  sensor_maintenance_data.csv   ← Sensor Maintenance (ground-truth fault labels)
-```
-
-### Running on real data
-
-```bash
-# List datasets and check which files are present
-python experiments/run_real_data.py --list
-
-# Run all available datasets
-python experiments/run_real_data.py
-
-# Run one specific dataset
-python experiments/run_real_data.py --dataset berkeley
-python experiments/run_real_data.py --dataset airquality
-python experiments/run_real_data.py --dataset smartcity
-python experiments/run_real_data.py --dataset maintenance
-```
-
-Output figures are saved to `results/figures/real_<dataset>_*.pdf`.
-A JSON summary is saved to `results/real_data_summary.json`.
-
-### What each dataset tests
-
-| Dataset             | Key experiment                                  | Ground truth |
-|---------------------|-------------------------------------------------|--------------|
-| Berkeley            | Temperature fusion across 54 sensors            | None         |
-| Air Quality         | Oxide sensor drift detection                    | Heuristic    |
-| Smart City IoT      | Traffic / energy / noise by city and type       | None         |
-| Sensor Maintenance  | Fault detection with labelled fault status      | ✓ Yes        |
+MIT License.

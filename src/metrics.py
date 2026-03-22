@@ -47,6 +47,7 @@ def communication_overhead(n_iter_consensus: int) -> dict:
         local_median    = 1,
         plain_consensus = 1 + n_iter_consensus,
         proposed        = 1 + n_iter_consensus,
+        dist_kf         = n_iter_consensus,  # consensus only (no separate disagr. round)
     )
 
 

@@ -1,0 +1,49 @@
+{
+  "exp2": {
+    "estimates": {},
+    "fault_onset": 50,
+    "mse": {
+      "Average": 1.1044928305893014,
+      "Trimmed Mean": 0.43719087911480775,
+      "Local Median": 0.0003789144960636467,
+      "Plain Consensus": 1.1044928305893027,
+      "Proposed": 0.019956290213559727,
+      "Dist. KF": 1.0138182726216431
+    },
+    "det": {
+      "Proposed": {
+        "FDR": 1.0,
+        "FAR": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "F1": 1.0,
+        "TP": 10,
+        "FP": 0,
+        "FN": 0,
+        "TN": 40
+      },
+      "CUSUM": {
+        "FDR": 1.0,
+        "FAR": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "F1": 1.0,
+        "TP": 10,
+        "FP": 0,
+        "FN": 0,
+        "TN": 40
+      },
+      "EWMA": {
+        "FDR": 1.0,
+        "FAR": 0.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "F1": 1.0,
+        "TP": 10,
+        "FP": 0,
+        "FN": 0,
+        "TN": 40
+      }
+    }
+  }
+}

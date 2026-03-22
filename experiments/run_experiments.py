@@ -19,12 +19,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.network   import (build_random_geometric_graph,
                             assign_faults_random, assign_faults_clustered,
-                            build_metropolis_weights,
-                            assign_faults_random, assign_faults_clustered)
+                            build_metropolis_weights)
 from src.signal    import (generate_signal, generate_measurements,
                             make_heterogeneous_noise)
 from src.fusion    import (fuse_average, fuse_trimmed_mean, fuse_local_median,
-                            fuse_consensus_plain, fuse_proposed)
+                            fuse_consensus_plain, fuse_proposed,
+                            fuse_distributed_kf)
 from src.detection import DisagreementDetector, CUSUMDetector, EWMADetector
 from src.metrics   import mse, rmse, detection_metrics, communication_overhead, ci95
 import src.visualize as viz
@@ -89,6 +89,7 @@ def run_one(cfg, fault_fraction, fault_type,
         alpha=fus["alpha"], beta=fus["beta"],
         lag=fus["lag"], n_iter=fus["n_iter"],
     )
+    s_dkf  = fuse_distributed_kf(Y, P, n_iter=fus["n_iter"])
 
     # ── Detectors ───────────────────────────────────────────────────────────
     dd  = DisagreementDetector(alpha=fus["alpha"], beta=fus["beta"],
@@ -109,6 +110,7 @@ def run_one(cfg, fault_fraction, fault_type,
         **{"Local Median": s_lmed},
         **{"Plain Consensus": s_pcon},
         Proposed=s_prop,
+        **{"Dist. KF": s_dkf},
     )
 
     return dict(
@@ -154,7 +156,7 @@ def det_mean(rows, detector, metric):
     return float(np.mean([r["det"][detector][metric] for r in rows]))
 
 
-METHODS = ["Average", "Trimmed Mean", "Local Median", "Plain Consensus", "Proposed"]
+METHODS = ["Average", "Trimmed Mean", "Local Median", "Plain Consensus", "Proposed", "Dist. KF"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -514,11 +516,54 @@ def exp11_comm_overhead(cfg):
         "Local Median":    overhead["local_median"],
         "Plain Consensus": overhead["plain_consensus"],
         "Proposed":        overhead["proposed"],
+        "Dist. KF":        overhead["dist_kf"],
     }
     print("  MSE:", {k: f"{v:.5f}" for k, v in mse_scalar.items()})
     print("  Overhead:", oh_mapped)
     viz.plot_comm_overhead(oh_mapped, mse_scalar)
     return dict(mse=mse_scalar, overhead=oh_mapped)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Exp 12: Distributed KF comparison
+# ─────────────────────────────────────────────────────────────────────────────
+
+def exp12_distributed_kf(cfg):
+    """
+    Head-to-head comparison of the Distributed Kalman Filter (DKF) vs
+    the proposed method, plain consensus, average, and trimmed mean.
+
+    The DKF is a strong distributed baseline: it uses a principled
+    probabilistic model (random-walk state + Gaussian observations) and
+    shares posterior estimates via consensus. However, it has no
+    fault-awareness — faulty sensor posteriors contaminate the consensus.
+
+    This experiment shows:
+      • Under low fault rates, DKF is competitive with the proposed method.
+      • As fault fraction increases, DKF degrades because it cannot
+        down-weight faulty posteriors; proposed method stays robust.
+    """
+    print("\n=== Exp 12: Distributed KF Comparison ===")
+    fracs, n = cfg["sweeps"]["fault_fractions"], cfg["sweeps"]["n_trials"]
+    ft = cfg["faults"]["fault_type"]
+
+    mse_means = {m: [] for m in METHODS}
+    mse_cis   = {m: [] for m in METHODS}
+
+    for ff in fracs:
+        rows = mc(cfg, n, ff, ft)
+        for m in METHODS:
+            mu, ci = mse_mean_ci(rows, m)
+            mse_means[m].append(mu)
+            mse_cis[m].append(ci)
+        print(f"  {ff:.0%}  "
+              + f"Prop={mse_means['Proposed'][-1]:.5f}  "
+              + f"DKF={mse_means['Dist. KF'][-1]:.5f}  "
+              + f"PConsen={mse_means['Plain Consensus'][-1]:.5f}  "
+              + f"Avg={mse_means['Average'][-1]:.5f}")
+
+    viz.plot_distributed_kf_comparison(fracs, mse_means, mse_cis)
+    return dict(fractions=fracs, mse=mse_means, ci=mse_cis)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -575,13 +620,14 @@ def main():
     summary["exp9_N"]          = exp9_network_size(cfg)
     summary["exp10_fault_type"]= exp10_fault_types(cfg)
     summary["exp11_overhead"]  = exp11_comm_overhead(cfg)
+    summary["exp12_dist_kf"]   = exp12_distributed_kf(cfg)
 
     with open("results/summary.json", "w") as f:
         json.dump(clean_for_json(summary), f, indent=2, default=float)
 
     print("\n" + "="*60)
-    print("✓ All 11 experiments complete")
-    print("✓ 13 figures → results/figures/")
+    print("✓ All 12 experiments complete")
+    print("✓ 16 figures → results/figures/")
     print("✓ Numeric summary → results/summary.json")
     print("="*60)
 
